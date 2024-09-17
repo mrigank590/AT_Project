@@ -10,6 +10,7 @@ from .views import (
     logout_view,
     login_prompt_view,
 )
+from .api_views import RegisterView, LoginView, NoteListCreateView, NoteDetailView
 from rest_framework_simplejwt.views import (
     TokenObtainPairView,
     TokenRefreshView,
@@ -25,6 +26,10 @@ urlpatterns = [
     path("notes/<int:pk>/edit/", note_update_view, name="note-update"),
     path("notes/<int:pk>/delete/", note_delete_view, name="note-delete"),
     path("login_prompt/", login_prompt_view, name="login_prompt"),
+    path("api/register/", RegisterView.as_view(), name="api-register"),
+    path("api/login/", LoginView.as_view(), name="api-login"),
     path("api/token/", TokenObtainPairView.as_view(), name="token_obtain_pair"),
     path("api/token/refresh/", TokenRefreshView.as_view(), name="token_refresh"),
+    path("api/notes/", NoteListCreateView.as_view(), name="note-list-create"),
+    path("api/notes/<int:pk>/", NoteDetailView.as_view(), name="note-detail"),
 ]
