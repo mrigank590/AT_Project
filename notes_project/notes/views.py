@@ -1,22 +1,31 @@
 from django.shortcuts import render, redirect
-from django.contrib.auth import authenticate, login
+from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.decorators import login_required
-from django.contrib.auth.models import User
-from rest_framework_simplejwt.tokens import RefreshToken
 from .forms import UserRegistrationForm, UserLoginForm, NoteForm
 from .models import Note
-
-
-def home_view(request):
-    return render(request, "notes/base.html")
+from .serializers import UserSerializer
 
 
 def register_view(request):
     if request.method == "POST":
         form = UserRegistrationForm(request.POST)
         if form.is_valid():
-            form.save()
-            return redirect("login")
+            user_serializer = UserSerializer(data=form.cleaned_data)
+            if user_serializer.is_valid():
+                user_serializer.save()
+                return redirect("login")
+            else:
+                return render(
+                    request,
+                    "notes/register.html",
+                    {"form": form, "errors": user_serializer.errors},
+                )
+        else:
+            return render(
+                request,
+                "notes/register.html",
+                {"form": form, "errors": form.errors},
+            )
     else:
         form = UserRegistrationForm()
     return render(request, "notes/register.html", {"form": form})
@@ -35,6 +44,11 @@ def login_view(request):
     else:
         form = UserLoginForm()
     return render(request, "notes/login.html", {"form": form})
+
+
+def logout_view(request):
+    logout(request)
+    return redirect("login")
 
 
 @login_required
@@ -85,3 +99,11 @@ def note_delete_view(request, pk):
         note.delete()
         return redirect("note-list")
     return render(request, "notes/note_confirm_delete.html", {"note": note})
+
+
+def home_view(request):
+    return render(request, "notes/base.html")
+
+
+def login_prompt_view(request):
+    return render(request, "notes/login_prompt.html")
