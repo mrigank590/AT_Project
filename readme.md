@@ -37,8 +37,15 @@ Open a new terminal window and run the following command to apply the database m
 ```bash
 docker-compose exec web python manage.py migrate
 ```
+### 4. Launch the Application
 
-### 4. Create a Superuser (Optional)
+After applying the migrations, you can access the application by visiting:
+
+```bash
+http://localhost:8000/
+```
+
+### 5. Create a Superuser (Optional)
 
 If you want to create a superuser for accessing the Django admin interface, run the following command:
 
