@@ -2,14 +2,26 @@ version: '3.8'
 
 services:
   db:
-    image: postgres
+    restart: always
+    image: postgres:16.4-alpine3.20
+    container_name: Notes_Database
     environment:
       POSTGRES_DB: notes_db
       POSTGRES_USER: user
       POSTGRES_PASSWORD: password
+    ports:
+      - "5432:5432"
+
+  adminer:
+    image: adminer
+    restart: always
+    ports:
+      - "8080:8080"
 
   web:
-    build: .
+    restart: always
+    build:
+      context: .
     command: python manage.py runserver 0.0.0.0:8000
     volumes:
       - .:/app
