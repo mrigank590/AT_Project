@@ -1,48 +1,87 @@
-from django.shortcuts import render
-from rest_framework import generics, permissions
-from rest_framework.response import Response
-from rest_framework_simplejwt.tokens import RefreshToken
+from django.shortcuts import render, redirect
+from django.contrib.auth import authenticate, login
+from django.contrib.auth.decorators import login_required
 from django.contrib.auth.models import User
-from .serializers import UserSerializer, NoteSerializer
+from rest_framework_simplejwt.tokens import RefreshToken
+from .forms import UserRegistrationForm, UserLoginForm, NoteForm
 from .models import Note
 
 
-# Create your views here.
-class RegisterView(generics.CreateAPIView):
-    queryset = User.objects.all()
-    serializer_class = UserSerializer
+def home_view(request):
+    return render(request, "notes/base.html")
 
 
-class LoginView(generics.GenericAPIView):
-    serializer_class = UserSerializer
-
-    def post(self, request, *args, **kwargs):
-        user = User.objects.get(username=request.data["username"])
-        if user.check_password(request.data["password"]):
-            refresh = RefreshToken.for_user(user)
-            return Response(
-                {
-                    "refresh": str(refresh),
-                    "access": str(refresh.access_token),
-                }
-            )
-        return Response({"error": "Invalid Credentials"}, status=400)
+def register_view(request):
+    if request.method == "POST":
+        form = UserRegistrationForm(request.POST)
+        if form.is_valid():
+            form.save()
+            return redirect("login")
+    else:
+        form = UserRegistrationForm()
+    return render(request, "notes/register.html", {"form": form})
 
 
-class NoteListCreateView(generics.ListCreateAPIView):
-    serializer_class = NoteSerializer
-    permission_classes = [permissions.IsAuthenticated]
+def login_view(request):
+    if request.method == "POST":
+        form = UserLoginForm(request.POST)
+        if form.is_valid():
+            username = form.cleaned_data["username"]
+            password = form.cleaned_data["password"]
+            user = authenticate(request, username=username, password=password)
+            if user is not None:
+                login(request, user)
+                return redirect("note-list")
+    else:
+        form = UserLoginForm()
+    return render(request, "notes/login.html", {"form": form})
 
-    def get_queryset(self):
-        return Note.objects.filter(user=self.request.user)
 
-    def perform_create(self, serializer):
-        serializer.save(user=self.request.user)
+@login_required
+def note_list_view(request):
+    notes = Note.objects.filter(user=request.user)
+    return render(request, "notes/note_list.html", {"notes": notes})
 
 
-class NoteDetailView(generics.RetrieveUpdateDestroyAPIView):
-    serializer_class = NoteSerializer
-    permission_classes = [permissions.IsAuthenticated]
+@login_required
+def note_create_view(request):
+    if request.method == "POST":
+        form = NoteForm(request.POST)
+        if form.is_valid():
+            note = form.save(commit=False)
+            note.user = request.user
+            note.save()
+            return redirect("note-list")
+    else:
+        form = NoteForm()
+    return render(
+        request,
+        "notes/note_form.html",
+        {"form": form, "form_title": "Create Note", "button_text": "Create"},
+    )
 
-    def get_queryset(self):
-        return Note.objects.filter(user=self.request.user)
+
+@login_required
+def note_update_view(request, pk):
+    note = Note.objects.get(pk=pk, user=request.user)
+    if request.method == "POST":
+        form = NoteForm(request.POST, instance=note)
+        if form.is_valid():
+            form.save()
+            return redirect("note-list")
+    else:
+        form = NoteForm(instance=note)
+    return render(
+        request,
+        "notes/note_form.html",
+        {"form": form, "form_title": "Edit Note", "button_text": "Update"},
+    )
+
+
+@login_required
+def note_delete_view(request, pk):
+    note = Note.objects.get(pk=pk, user=request.user)
+    if request.method == "POST":
+        note.delete()
+        return redirect("note-list")
+    return render(request, "notes/note_confirm_delete.html", {"note": note})
